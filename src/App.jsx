@@ -263,7 +263,7 @@ export default function App() {
                   setScreen(SCREENS.VOICE);
                 }}
               >
-                Add Voice Note
+                Record Audio/Video
               </button>
             </div>
 
@@ -440,26 +440,6 @@ export default function App() {
             <p style={{ color: "#9aa0ae", margin: 0 }}>
               Explore the shared AR space below.
             </p>
-
-            {/* MyWebAR embedded */}
-            <div
-              className="iframe-wrap"
-              style={{
-                height: "60vh",
-                borderRadius: "16px",
-                overflow: "hidden",
-              }}
-            >
-              <iframe
-                src="https://mywebar.com/p/Project_0_85uvz8sd2r"
-                frameBorder="0"
-                scrolling="yes"
-                seamless="seamless"
-                style={{ display: "block", width: "100%", height: "100%" }}
-                allow="camera; gyroscope; accelerometer; magnetometer; xr-spatial-tracking; microphone"
-                title="Shared WebAR Scene"
-              ></iframe>
-            </div>
 
             {/* NEW: list of all videos in this room */}
             <div>
