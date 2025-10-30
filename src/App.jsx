@@ -20,6 +20,7 @@ const SCREENS = {
   VOICE: "VOICE",
   SUBMIT: "SUBMIT",
   REVEAL: "REVEAL",
+  IMMERSIVE: "IMMERSIVE",
 };
 
 export default function App() {
@@ -45,6 +46,10 @@ export default function App() {
   // clip list
   const [clips, setClips] = useState([]);
   const iframeRef = useRef(null);
+  // immersive experiences (GLB+audio or immersive video)
+  const immersiveIframeRef = useRef(null);
+  const [experiences, setExperiences] = useState([]);
+  const [selectedExperience, setSelectedExperience] = useState(null);
 
   const ensureRoom = () => {
     if (!roomId.trim()) {
@@ -138,6 +143,11 @@ export default function App() {
     if (win) win.postMessage({ type: "clips", payload }, "*");
   };
 
+  const postToImmersive = (payload) => {
+    const win = immersiveIframeRef.current?.contentWindow;
+    if (win) win.postMessage({ type: "experience", payload }, "*");
+  };
+
   useEffect(() => {
     if (screen === SCREENS.REVEAL && iframeRef.current) {
       const onLoad = () => postToAR(clips);
@@ -146,6 +156,35 @@ export default function App() {
       return () => iframe.removeEventListener("load", onLoad);
     }
   }, [screen, clips]);
+
+  // Load experiences for IMMERSIVE screen
+  useEffect(() => {
+    const rid = roomId.trim();
+    if (!rid) return;
+    if (screen !== SCREENS.IMMERSIVE) return;
+    (async () => {
+      const q = query(
+        collection(db, "experiences"),
+        where("roomId", "==", rid),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      setExperiences(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    })();
+  }, [screen, roomId]);
+
+  // When an immersive iframe is present, send the selected experience
+  useEffect(() => {
+    if (screen !== SCREENS.IMMERSIVE) return;
+    if (!selectedExperience) return;
+    const iframe = immersiveIframeRef.current;
+    if (!iframe) return;
+    const onLoad = () => postToImmersive(selectedExperience);
+    iframe.addEventListener("load", onLoad);
+    // also try immediate post in case it's already loaded
+    postToImmersive(selectedExperience);
+    return () => iframe.removeEventListener("load", onLoad);
+  }, [screen, selectedExperience]);
 
   const handleUpload = async () => {
     const rid = ensureRoom();
@@ -264,6 +303,15 @@ export default function App() {
                 }}
               >
                 Record Audio/Video
+              </button>
+              <button
+                className="ghost"
+                onClick={() => {
+                  ensureRoom();
+                  setScreen(SCREENS.IMMERSIVE);
+                }}
+              >
+                Immersive AR
               </button>
             </div>
 
@@ -505,6 +553,78 @@ export default function App() {
                 <div className="scan-frame"></div>
               </div>
             </details>
+
+            <div className="row">
+              <button className="ghost" onClick={() => setScreen(SCREENS.HOME)}>
+                ← Back
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {screen === SCREENS.IMMERSIVE && (
+          <motion.div
+            key="IMMERSIVE"
+            className="card"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            style={{ display: "grid", gap: 12 }}
+          >
+            <b>Immersive AR Experiences</b>
+            <p style={{ color: "#9aa0ae", margin: 0 }}>
+              Pick an experience to view in AR.
+            </p>
+
+            <div className="row" style={{ width: "100%" }}>
+              {experiences.length === 0 ? (
+                <div className="badge">No experiences yet.</div>
+              ) : (
+                experiences.map((ex) => (
+                  <div
+                    key={ex.id}
+                    className="card"
+                    style={{ flex: "1 1 280px", background: "#171a25" }}
+                  >
+                    <div className="badge" style={{ marginBottom: 8 }}>
+                      {new Date(
+                        ex.createdAt?.seconds
+                          ? ex.createdAt.seconds * 1000
+                          : Date.now()
+                      ).toLocaleString()}
+                    </div>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <b style={{ color: "#e7e7ea" }}>{ex.title || "Untitled"}</b>
+                      {ex.thumbUrl && (
+                        <img
+                          src={ex.thumbUrl}
+                          alt={ex.title || "thumb"}
+                          style={{ width: "100%", borderRadius: 10 }}
+                        />
+                      )}
+                      <small style={{ color: "#9aa0ae" }}>
+                        {ex.videoUrl ? "Immersive video" : "GLB + Audio"}
+                      </small>
+                      <button onClick={() => setSelectedExperience(ex)} className="ok">
+                        View in AR
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {selectedExperience && (
+              <div className="iframe-wrap" style={{ marginTop: 8 }}>
+                <iframe
+                  ref={immersiveIframeRef}
+                  src={`/ar/experience.html#${encodeURIComponent(roomId || "demo-room")}`}
+                  allow="camera *; microphone *; xr-spatial-tracking; fullscreen"
+                  title="Immersive Experience"
+                ></iframe>
+                <div className="scan-frame"></div>
+              </div>
+            )}
 
             <div className="row">
               <button className="ghost" onClick={() => setScreen(SCREENS.HOME)}>
