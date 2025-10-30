@@ -173,14 +173,13 @@
             });
             t.setAttribute("position", "0 0.35 0");
             t.setAttribute("opacity", "0.75");
-            t.setAttribute("opacity", "0.75");
             wrap.appendChild(t);
 
             // Spatialized sound with gentle falloff
             const el = document.createElement("a-entity");
             el.setAttribute(
               "sound",
-              `src: ${c.url}; autoplay: true; loop: true; positional: true; distanceModel: linear; refDistance: 0.6; rolloffFactor: 2.0; maxDistance: 6`
+              `src: url(${c.url}); autoplay: true; loop: true; positional: true; distanceModel: linear; refDistance: 0.6; rolloffFactor: 2.0; maxDistance: 6`
             );
             el.setAttribute("position", "0 0.2 0");
             wrap.appendChild(el);
