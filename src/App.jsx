@@ -14,6 +14,33 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AudioRecorder from "./AudioRecorder";
 import jsQR from "jsqr";
 
+// Validate and handle QR scan content safely (no open redirects)
+function handleQrNavigate(raw) {
+  try {
+    // Support absolute and relative URLs, but restrict to same-origin and expected path
+    const url = new URL(raw, window.location.origin);
+    const sameOrigin = url.origin === window.location.origin;
+    const hasRoomParam = url.pathname === "/" && url.searchParams.has("room");
+    if (sameOrigin && hasRoomParam) {
+      window.location.href = url.toString();
+      return true;
+    }
+  } catch {
+    // Not a URL; fall through to room-id handling
+  }
+
+  // If it's not a URL, treat value as room id if safe
+  const roomIdCandidate = String(raw || "").trim();
+  if (/^[a-zA-Z0-9_-]{1,64}$/.test(roomIdCandidate)) {
+    const safe = `/?room=${encodeURIComponent(roomIdCandidate)}`;
+    window.location.href = safe;
+    return true;
+  }
+
+  alert("Unrecognized or unsafe QR content. Expected same-origin ?room=… link or a room id.");
+  return false;
+}
+
 const SCREENS = {
   HOME: "HOME",
   SCAN: "SCAN",
@@ -45,6 +72,20 @@ export default function App() {
   // clip list
   const [clips, setClips] = useState([]);
   const iframeRef = useRef(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
+
+  // Manage object URL for local video preview to avoid leaks
+  useEffect(() => {
+    if (!videoFile) {
+      setVideoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [videoFile]);
 
   const ensureRoom = () => {
     if (!roomId.trim()) {
@@ -100,14 +141,14 @@ export default function App() {
               inversionAttempts: "dontInvert",
             });
             if (code?.data) {
-              // stop camera and redirect
+              // stop camera and redirect safely
               try {
                 stream.getTracks().forEach((t) => t.stop());
               } catch {}
-              cancelAnimationFrame(rafRef.current);
-              // Add a tiny UX pause (optional)
+              if (rafRef.current) cancelAnimationFrame(rafRef.current);
+              // Tiny UX pause (optional)
               setTimeout(() => {
-                window.location.href = code.data;
+                handleQrNavigate(code.data);
               }, 150);
               return;
             }
@@ -123,7 +164,7 @@ export default function App() {
     start();
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (streamRef.current) {
         try {
           streamRef.current.getTracks().forEach((t) => t.stop());
@@ -135,7 +176,7 @@ export default function App() {
   // Parent -> child for local AR (kept for your details panel)
   const postToAR = (payload) => {
     const win = iframeRef.current?.contentWindow;
-    if (win) win.postMessage({ type: "clips", payload }, "*");
+    if (win) win.postMessage({ type: "clips", payload }, window.location.origin);
   };
 
   useEffect(() => {
@@ -408,12 +449,8 @@ export default function App() {
               </div>
             </div>
 
-            {videoFile && (
-              <video
-                className="preview"
-                src={URL.createObjectURL(videoFile)}
-                controls
-              />
+            {videoFile && videoPreviewUrl && (
+              <video className="preview" src={videoPreviewUrl} controls />
             )}
 
             <div className="row">

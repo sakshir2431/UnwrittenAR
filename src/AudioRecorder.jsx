@@ -23,7 +23,11 @@ export default function AudioRecorder({ roomId, onDone, onBack }) {
     mr.onstop = () => {
       const b = new Blob(chunksRef.current, { type: "audio/webm" });
       setBlob(b);
-      setBlobUrl(URL.createObjectURL(b));
+      // Revoke previous preview URL if any to avoid leaks
+      setBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(b);
+      });
     };
     mr.start(100);
     mediaRecorderRef.current = mr;
@@ -49,6 +53,8 @@ export default function AudioRecorder({ roomId, onDone, onBack }) {
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
       }
+      // Cleanup any preview URL
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
   }, []);
 
@@ -109,6 +115,7 @@ export default function AudioRecorder({ roomId, onDone, onBack }) {
           <div className="row" style={{ gap: 8 }}>
             <button
               onClick={() => {
+                if (blobUrl) URL.revokeObjectURL(blobUrl);
                 setBlob(null);
                 setBlobUrl(null);
               }}
