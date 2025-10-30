@@ -171,7 +171,10 @@
 
             // Spatialized sound with gentle falloff
             const el = document.createElement("a-entity");
-            el.setAttribute("sound", `src: ${c.url}; autoplay: true; loop: true; positional: true; distanceModel: linear; refDistance: 0.6; rolloffFactor: 2.0; maxDistance: 6`);
+            el.setAttribute(
+              "sound",
+              `src: url(${c.url}); autoplay: true; loop: true; positional: true; distanceModel: linear; refDistance: 0.6; rolloffFactor: 2.0; maxDistance: 6`
+            );
             el.setAttribute("position", "0 0.2 0");
             wrap.appendChild(el);
           } else if (c.type === "text" && c.text) {
