@@ -156,10 +156,11 @@ export default function App() {
     })();
   }, [screen, roomId]);
 
-  // When an immersive iframe is present, send the selected experience
+  // When an immersive iframe is present, send the selected experience (only for local viewer)
   useEffect(() => {
     if (screen !== SCREENS.IMMERSIVE) return;
     if (!selectedExperience) return;
+    if (selectedExperience.externalUrl) return; // external experiences handled via iframe src
     const iframe = immersiveIframeRef.current;
     if (!iframe) return;
     const onLoad = () => postToImmersive(selectedExperience);
@@ -519,13 +520,27 @@ export default function App() {
 
             {selectedExperience && (
               <div className="iframe-wrap" style={{ marginTop: 8 }}>
-                <iframe
-                  ref={immersiveIframeRef}
-                  src={`/ar/experience.html#${encodeURIComponent(roomId || "demo-room")}`}
-                  allow="camera *; microphone *; xr-spatial-tracking; fullscreen"
-                  title="Immersive Experience"
-                ></iframe>
-                <div className="scan-frame"></div>
+                {selectedExperience.externalUrl ? (
+                  <iframe
+                    src={selectedExperience.externalUrl}
+                    frameBorder="0"
+                    scrolling="yes"
+                    seamless="seamless"
+                    style={{ display: "block", width: "100%", height: "100%" }}
+                    allow="camera;gyroscope;accelerometer;magnetometer;xr-spatial-tracking;microphone"
+                    title={selectedExperience.title || "External AR"}
+                  ></iframe>
+                ) : (
+                  <>
+                    <iframe
+                      ref={immersiveIframeRef}
+                      src={`/ar/experience.html#${encodeURIComponent(roomId || "demo-room")}`}
+                      allow="camera *; microphone *; xr-spatial-tracking; fullscreen"
+                      title="Immersive Experience"
+                    ></iframe>
+                    <div className="scan-frame"></div>
+                  </>
+                )}
               </div>
             )}
 
