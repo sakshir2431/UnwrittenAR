@@ -19,7 +19,6 @@ const SCREENS = {
   SCAN: "SCAN",
   VOICE: "VOICE",
   SUBMIT: "SUBMIT",
-  REVEAL: "REVEAL",
   IMMERSIVE: "IMMERSIVE",
 };
 
@@ -45,7 +44,6 @@ export default function App() {
 
   // clip list
   const [clips, setClips] = useState([]);
-  const iframeRef = useRef(null);
   // immersive experiences (GLB+audio or immersive video)
   const immersiveIframeRef = useRef(null);
   const [experiences, setExperiences] = useState([]);
@@ -137,25 +135,10 @@ export default function App() {
     };
   }, [screen]);
 
-  // Parent -> child for local AR (kept for your details panel)
-  const postToAR = (payload) => {
-    const win = iframeRef.current?.contentWindow;
-    if (win) win.postMessage({ type: "clips", payload }, "*");
-  };
-
   const postToImmersive = (payload) => {
     const win = immersiveIframeRef.current?.contentWindow;
     if (win) win.postMessage({ type: "experience", payload }, "*");
   };
-
-  useEffect(() => {
-    if (screen === SCREENS.REVEAL && iframeRef.current) {
-      const onLoad = () => postToAR(clips);
-      const iframe = iframeRef.current;
-      iframe.addEventListener("load", onLoad);
-      return () => iframe.removeEventListener("load", onLoad);
-    }
-  }, [screen, clips]);
 
   // Load experiences for IMMERSIVE screen
   useEffect(() => {
@@ -228,7 +211,6 @@ export default function App() {
       const snap = await getDocs(q);
       const next = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setClips(next);
-      postToAR(next);
     } catch (e) {
       alert("Upload failed: " + e.message);
     } finally {
@@ -236,8 +218,7 @@ export default function App() {
     }
   };
 
-  // Derived: video-only list for Open AR Scene
-  const videoClips = clips.filter((c) => c.type === "video");
+  // Derived examples (kept if needed later)
 
   return (
     <div className="app">
@@ -276,10 +257,10 @@ export default function App() {
                 className="ghost"
                 onClick={() => {
                   ensureRoom();
-                  setScreen(SCREENS.REVEAL);
+                  setScreen(SCREENS.IMMERSIVE);
                 }}
               >
-                Open AR Scene
+                watch videos
               </button>
               {/* Removed: Generate QR */}
             </div>
@@ -303,15 +284,6 @@ export default function App() {
                 }}
               >
                 Record Audio/Video
-              </button>
-              <button
-                className="ghost"
-                onClick={() => {
-                  ensureRoom();
-                  setScreen(SCREENS.IMMERSIVE);
-                }}
-              >
-                Immersive AR
               </button>
             </div>
 
@@ -475,92 +447,7 @@ export default function App() {
           </motion.div>
         )}
 
-        {screen === SCREENS.REVEAL && (
-          <motion.div
-            key="REVEAL"
-            className="card"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            style={{ display: "grid", gap: 12 }}
-          >
-            <b>Watch AR Stories from Others</b>
-            <p style={{ color: "#9aa0ae", margin: 0 }}>
-              Explore the shared AR space below.
-            </p>
-
-            {/* NEW: list of all videos in this room */}
-            <div>
-              <b style={{ display: "block", marginBottom: 8 }}>
-                All Videos in “{roomId || "demo-room"}”
-              </b>
-              {videoClips.length === 0 ? (
-                <div className="badge">No videos yet.</div>
-              ) : (
-                <div className="row" style={{ width: "100%" }}>
-                  {videoClips.map((v) => (
-                    <div
-                      key={v.id}
-                      className="card"
-                      style={{
-                        flex: "1 1 280px",
-                        background: "#171a25",
-                        display: "grid",
-                        gap: 8,
-                      }}
-                    >
-                      <video
-                        src={v.url}
-                        controls
-                        style={{ width: "100%", borderRadius: 10 }}
-                      />
-                      <a
-                        href={v.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: "#8ad3ff" }}
-                      >
-                        Open video in new tab ↗
-                      </a>
-                      <div className="badge">
-                        {new Date(
-                          v.createdAt?.seconds
-                            ? v.createdAt.seconds * 1000
-                            : Date.now()
-                        ).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <details>
-              <summary
-                style={{ cursor: "pointer", color: "#00bcd4", marginTop: 6 }}
-              >
-                🔍 View local AR scene (optional)
-              </summary>
-              <div className="iframe-wrap" style={{ marginTop: 12 }}>
-                <iframe
-                  ref={iframeRef}
-                  src={`/ar/ar-scene-floor.html#${encodeURIComponent(
-                    roomId || "demo-room"
-                  )}`}
-                  allow="camera *; microphone *; xr-spatial-tracking; fullscreen"
-                  title="Local AR Scene"
-                ></iframe>
-                <div className="scan-frame"></div>
-              </div>
-            </details>
-
-            <div className="row">
-              <button className="ghost" onClick={() => setScreen(SCREENS.HOME)}>
-                ← Back
-              </button>
-            </div>
-          </motion.div>
-        )}
+        {/* REVEAL screen removed per request */}
 
         {screen === SCREENS.IMMERSIVE && (
           <motion.div
