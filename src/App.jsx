@@ -263,7 +263,7 @@ export default function App() {
                   setScreen(SCREENS.VOICE);
                 }}
               >
-                Add Voice Note
+                Record Audio/Video
               </button>
             </div>
 
