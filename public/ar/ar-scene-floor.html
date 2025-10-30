@@ -24,7 +24,7 @@
         transform: translateX(-50%);
         padding: 8px 12px;
         border-radius: 999px;
-        background: rgba(0, 0, 0, 0.55);
+        background: rgba(255, 255, 255, 0.08);
         z-index: 2;
       }
       .tap {
@@ -34,16 +34,14 @@
         transform: translateX(-50%);
         padding: 8px 12px;
         border-radius: 999px;
-        background: rgba(0, 0, 0, 0.55);
+        background: rgba(255, 255, 255, 0.08);
         z-index: 2;
       }
     </style>
   </head>
   <body>
-    <div class="hint">
-      Move phone to detect a surface · Tap to place holograms
-    </div>
-    <div class="tap">Tap to place</div>
+    <div class="hint">Gently move to find a surface</div>
+    <div class="tap">Tap to reveal stories</div>
 
     <a-scene
       xr-mode-ui="enabled: true"
@@ -86,6 +84,14 @@
             loop: true,
             easing: "easeInOutSine",
           });
+          this.el.setAttribute("animation__fade", {
+            property: "material.opacity",
+            to: 0.9,
+            dir: "alternate",
+            dur: 2200,
+            loop: true,
+            easing: "easeInOutSine",
+          });
         },
       });
 
@@ -123,11 +129,13 @@
           wrap.setAttribute("billboard", "");
           wrap.setAttribute("floaty", "");
 
-          const base = document.createElement("a-cylinder");
-          base.setAttribute("radius", "0.25");
-          base.setAttribute("height", "0.06");
-          base.setAttribute("color", "#222");
-          base.setAttribute("opacity", "0.95");
+          // Subtle base ring
+          const base = document.createElement("a-ring");
+          base.setAttribute("radius-inner", "0.18");
+          base.setAttribute("radius-outer", "0.22");
+          base.setAttribute("rotation", "-90 0 0");
+          base.setAttribute("position", "0 0.01 0");
+          base.setAttribute("material", "color: #cfd3de; opacity: 0.25; transparent: true");
           wrap.appendChild(base);
 
           if (c.type === "glb") {
@@ -135,6 +143,7 @@
             e.setAttribute("gltf-model", c.url);
             e.setAttribute("position", "0 0.1 0");
             e.setAttribute("scale", "0.6 0.6 0.6");
+            e.setAttribute("animation__spin", "property: rotation; to: 0 360 0; loop: true; dur: 16000; easing: linear");
             wrap.appendChild(e);
           } else if (c.type === "video") {
             const v = document.createElement("a-video");
@@ -144,28 +153,43 @@
             v.setAttribute("position", "0 0.35 0");
             v.setAttribute("loop", "true");
             v.setAttribute("autoplay", "true");
+            v.setAttribute("material", "opacity: 0.92; transparent: true");
             wrap.appendChild(v);
           } else if (c.type === "audio") {
-            const t = document.createElement("a-text");
-            t.setAttribute("value", "🔊 Voice note");
-            t.setAttribute("align", "center");
+            // Minimal label
+            const t = document.createElement("a-entity");
+            t.setAttribute("text", {
+              value: "voice note",
+              align: "center",
+              color: "#e7e7ea",
+              width: 1.8,
+              shader: "msdf",
+            });
             t.setAttribute("position", "0 0.35 0");
-            t.setAttribute("width", "1.2");
+            t.setAttribute("opacity", "0.75");
             wrap.appendChild(t);
 
-            const a = document.createElement("audio");
-            a.src = c.url;
-            a.loop = true;
-            a.autoplay = true;
-            a.crossOrigin = "anonymous";
-            // attach WebAudio to scene
+            // Spatialized sound with gentle falloff
             const el = document.createElement("a-entity");
-            el.setAttribute(
-              "sound",
-              `src: ${c.url}; autoplay: true; loop: true; positional: true;`
-            );
+            el.setAttribute("sound", `src: ${c.url}; autoplay: true; loop: true; positional: true; distanceModel: linear; refDistance: 0.6; rolloffFactor: 2.0; maxDistance: 6`);
             el.setAttribute("position", "0 0.2 0");
             wrap.appendChild(el);
+          } else if (c.type === "text" && c.text) {
+            // Floating poem/text snippet
+            const t = document.createElement("a-entity");
+            t.setAttribute("text", {
+              value: c.text,
+              align: "center",
+              color: "#f3f4f6",
+              width: 2.2,
+              lineHeight: 1.2,
+              wrapCount: 24,
+              shader: "msdf",
+            });
+            t.setAttribute("position", "0 0.42 0");
+            t.setAttribute("opacity", "0.85");
+            t.setAttribute("floaty", "");
+            wrap.appendChild(t);
           }
 
           root.appendChild(wrap);
