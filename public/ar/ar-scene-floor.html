@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,user-scalable=no"
+    />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- WebXR hit-test polyfills are built-in in A-Frame 1.5 for supported browsers -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        color: #fff;
+        font: 14px system-ui;
+      }
+      .hint {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 2;
+      }
+      .tap {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hint">
+      Move phone to detect a surface · Tap to place holograms
+    </div>
+    <div class="tap">Tap to place</div>
+
+    <a-scene
+      xr-mode-ui="enabled: true"
+      renderer="colorManagement: true; physicallyCorrectLights: true;"
+      webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: body;"
+      vr-mode-ui="enabled: false"
+      embedded
+    >
+      <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+      <a-entity
+        light="type: directional; intensity: 0.8"
+        position="0 1 0"
+      ></a-entity>
+
+      <a-camera position="0 1.6 0"></a-camera>
+
+      <!-- Root where we append items -->
+      <a-entity id="root"></a-entity>
+    </a-scene>
+
+    <script>
+      // Billboard: face camera each frame
+      AFRAME.registerComponent("billboard", {
+        tick: function () {
+          const cam = this.el.sceneEl.camera;
+          if (!cam) return;
+          const v = cam.getWorldPosition(new THREE.Vector3());
+          this.el.object3D.lookAt(v);
+        },
+      });
+
+      // Gentle float anim on child
+      AFRAME.registerComponent("floaty", {
+        init() {
+          this.el.setAttribute("animation__y", {
+            property: "position",
+            to: "0 0.05 0",
+            dir: "alternate",
+            dur: 1500,
+            loop: true,
+            easing: "easeInOutSine",
+          });
+        },
+      });
+
+      const root = document.getElementById("root");
+      let roomId = decodeURIComponent(location.hash.slice(1) || "");
+
+      // Place group on tap using a basic raycaster to ground (y=0)
+      let yPlane = 0;
+      document.body.addEventListener("click", (ev) => {
+        // If we have anything, just clone the last set placed
+        // (real hit-test would use nippon https://github.com/aframevr/aframe/pull/5078 approach)
+        // Here we place at small offset forward from camera:
+        const cam = document.querySelector("a-camera").object3D;
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+        const pos = cam.position.clone().add(dir.multiplyScalar(0.8));
+        spawnAll(pos);
+      });
+
+      function spawnAll(center) {
+        // remove previous if too many
+        const wraps = Array.from(root.children);
+        if (wraps.length > 24)
+          wraps.slice(0, wraps.length - 24).forEach((w) => w.remove());
+
+        (clipsCache || []).forEach((c, i) => {
+          const wrap = document.createElement("a-entity");
+          const angle = (i / Math.max(1, clipsCache.length)) * Math.PI * 2;
+          const r = 0.6;
+          const x = center.x + Math.cos(angle) * r;
+          const z = center.z + Math.sin(angle) * r;
+          wrap.setAttribute(
+            "position",
+            `${x} ${Math.max(0.02, center.y)} ${z}`
+          );
+          wrap.setAttribute("billboard", "");
+          wrap.setAttribute("floaty", "");
+
+          const base = document.createElement("a-cylinder");
+          base.setAttribute("radius", "0.25");
+          base.setAttribute("height", "0.06");
+          base.setAttribute("color", "#222");
+          base.setAttribute("opacity", "0.95");
+          wrap.appendChild(base);
+
+          if (c.type === "glb") {
+            const e = document.createElement("a-entity");
+            e.setAttribute("gltf-model", c.url);
+            e.setAttribute("position", "0 0.1 0");
+            e.setAttribute("scale", "0.6 0.6 0.6");
+            wrap.appendChild(e);
+          } else if (c.type === "video") {
+            const v = document.createElement("a-video");
+            v.setAttribute("src", c.url);
+            v.setAttribute("width", "0.6");
+            v.setAttribute("height", "0.35");
+            v.setAttribute("position", "0 0.35 0");
+            v.setAttribute("loop", "true");
+            v.setAttribute("autoplay", "true");
+            wrap.appendChild(v);
+          } else if (c.type === "audio") {
+            const t = document.createElement("a-text");
+            t.setAttribute("value", "🔊 Voice note");
+            t.setAttribute("align", "center");
+            t.setAttribute("position", "0 0.35 0");
+            t.setAttribute("width", "1.2");
+            wrap.appendChild(t);
+
+            const a = document.createElement("audio");
+            a.src = c.url;
+            a.loop = true;
+            a.autoplay = true;
+            a.crossOrigin = "anonymous";
+            // attach WebAudio to scene
+            const el = document.createElement("a-entity");
+            el.setAttribute(
+              "sound",
+              `src: ${c.url}; autoplay: true; loop: true; positional: true;`
+            );
+            el.setAttribute("position", "0 0.2 0");
+            wrap.appendChild(el);
+          }
+
+          root.appendChild(wrap);
+        });
+      }
+
+      // receive clips from parent
+      let clipsCache = [];
+      window.addEventListener("message", (ev) => {
+        if (ev?.data?.type === "clips") {
+          clipsCache = ev.data.payload || [];
+          // spawn a ring near camera when data arrives
+          const cam = document.querySelector("a-camera").object3D;
+          const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(
+            cam.quaternion
+          );
+          const pos = cam.position.clone().add(dir.multiplyScalar(0.8));
+          spawnAll(pos);
+        }
+      });
+    </script>
+  </body>
+</html>

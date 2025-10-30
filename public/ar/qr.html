@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body{font-family:system-ui;margin:24px;background:#0f1115;color:#fff}
+      .card{background:rgba(255,255,255,0.06);padding:16px;border-radius:12px;max-width:520px}
+      input,button{padding:10px;border-radius:10px;border:none}
+      input{width:100%;background:#1c1f28;color:#fff}
+      button{background:#00bcd4;color:#fff;margin-top:8px;font-weight:700;cursor:pointer}
+      img{margin-top:12px;border-radius:8;background:#fff;padding:8px}
+      small{color:#aaa}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h3 style="margin-top:0">QR for a Room</h3>
+      <input id="room" placeholder="room id (e.g., hirosquare-01)" />
+      <button onclick="gen()">Generate</button>
+      <div id="out"></div>
+      <p>
+        <small
+          >This links to <code>/?room=…</code> which the app reads
+          automatically.</small
+        >
+      </p>
+    </div>
+
+    <script>
+      function gen() {
+        const room = document.getElementById("room").value.trim();
+        if (!room) return;
+        const url = `${location.origin}/?room=${encodeURIComponent(room)}`;
+        const src = `https://api.qrserver.com/v1/create-qr-code/?size=340x340&data=${encodeURIComponent(
+          url
+        )}`;
+        document.getElementById("out").innerHTML = `
+          <p>URL: ${url}</p>
+          <img src="${src}" width="340" height="340"/>
+          <p><a href="${src}" download="unwritten-${room}.png">Download PNG</a></p>
+        `;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,68 @@
+:root {
+  --bg: #0f1115;
+  --card: rgba(255, 255, 255, 0.06);
+  --text: #e7e7ea;
+  --muted: #a8abb6;
+  --brand: #00bcd4;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.app { max-width: 860px; margin: 0 auto; padding: 16px; }
+
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; }
+
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+input, button, textarea, select {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: none; outline: none;
+}
+
+input, textarea, select { background: #1c1f28; color: var(--text); }
+
+button { background: var(--brand); color: #fff; font-weight: 700; cursor: pointer; }
+button.ghost { background: #242836; }
+button.ok { background: var(--ok); }
+button.warn { background: var(--warn); }
+button.err { background: var(--err); }
+
+/* show disabled state clearly */
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px; background: #1c1f28; color: var(--muted); font-weight: 600;
+}
+
+hr.sep { border: none; height: 1px; background: #212432; margin: 18px 0; }
+
+video.preview { width: 100%; max-height: 40vh; object-fit: cover; border-radius: 12px; }
+
+.iframe-wrap { position: relative; width: 100%; height: 70vh; border-radius: 16px; overflow: hidden; background: #000; }
+.iframe-wrap iframe { border: 0; width: 100%; height: 100%; }
+
+.scan-frame {
+  position: absolute; inset: 10% 15%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  pointer-events: none; /* 👈 prevent intercepting clicks */
+}
+
+.kbd {
+  padding: 2px 6px; background: #2a2f41; border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #cfd3de; font-size: 12px;
+}
