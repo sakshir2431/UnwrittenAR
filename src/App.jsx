@@ -463,6 +463,22 @@ export default function App() {
               Pick an experience to view in AR.
             </p>
 
+            {/* External MyWebAR experience */}
+            <div
+              className="iframe-wrap"
+              style={{ height: "100vh", borderRadius: "16px", overflow: "hidden" }}
+            >
+              <iframe
+                src="https://mywebar.com/p/Project_0_85uvz8sd2r"
+                frameBorder="0"
+                scrolling="yes"
+                seamless="seamless"
+                style={{ display: "block", width: "100%", height: "100%" }}
+                allow="camera;gyroscope;accelerometer;magnetometer;xr-spatial-tracking;microphone"
+                title="MyWebAR Experience"
+              ></iframe>
+            </div>
+
             <div className="row" style={{ width: "100%" }}>
               {experiences.length === 0 ? (
                 <div className="badge">No experiences yet.</div>
