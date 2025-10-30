@@ -74,6 +74,15 @@ export default function App() {
     })();
   }, [roomId]);
 
+  // Optional deep link: auto open immersive screen without scanning
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("auto") === "watch") {
+      ensureRoom();
+      setScreen(SCREENS.IMMERSIVE);
+    }
+  }, []);
+
   // ====== SCAN: QR reader that redirects ======
   useEffect(() => {
     if (screen !== SCREENS.SCAN) return;
